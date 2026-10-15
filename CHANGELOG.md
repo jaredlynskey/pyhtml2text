@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.3.0 (unreleased)
+## 0.3.0 (2026-10-15)
 
 - New `html2markdown(html, *, base_url=None)`: HTML to CommonMark with
   GitHub's tables and strikethrough. Links and images keep their URLs (made
