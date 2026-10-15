@@ -56,3 +56,34 @@ def test_tables():
 def test_unicode_and_empty():
     assert html2text("<p>한국어 텍스트 é</p>") == "한국어 텍스트 é\n"
     assert html2text("") == ""
+
+
+def test_bytes_input():
+    assert html2text("<p>café</p>".encode()) == "café\n"
+    assert html2text(b'<a href="/x">x</a>', base_url=PAGE) == html2text(
+        '<a href="/x">x</a>', base_url=PAGE
+    )
+
+
+def test_rejects_other_types():
+    import pytest
+
+    with pytest.raises(TypeError, match="str or bytes"):
+        html2text(123)
+
+
+def test_deep_nesting_is_linear():
+    # Parsing used to be quadratic in nesting depth (40,000 nested lists took
+    # 6s); with the patched html5ever this takes well under a second.
+    import platform
+    import sys
+    import time
+
+    html = "<ul><li>" * 100_000 + "x"
+    start = time.perf_counter()
+    out = html2text(html)
+    elapsed = time.perf_counter() - start
+    assert out.rstrip().endswith("x")
+    # Only time it where tests run natively; emulated CI runners are slow.
+    if platform.machine().lower() in ("x86_64", "amd64") or sys.platform == "darwin":
+        assert elapsed < 10, f"took {elapsed:.1f}s"

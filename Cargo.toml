@@ -1,6 +1,6 @@
 [package]
 name = "pyhtml2text"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 license = "MIT"
 publish = false
@@ -10,9 +10,16 @@ name = "_pyhtml2text"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.26", features = ["extension-module", "abi3-py39"] }
-# Fork of jugglerchris/rust-html2text with Config::base_url added.
-html2text = { git = "https://github.com/jaredlynskey/rust-html2text", rev = "ee049006a900891e9df46299004c38ff59c41d65" }
+pyo3 = { version = "0.26", features = ["extension-module", "abi3-py310"] }
+# Fork of jugglerchris/rust-html2text with Config::base_url and some
+# performance changes (branch pyhtml2text-perf).
+html2text = { git = "https://github.com/jaredlynskey/rust-html2text", rev = "9c109fac38728040cf3c32b411305cdd840bd511" }
+# Much faster than the system allocators for html2text's many small allocations.
+mimalloc = { version = "0.1", default-features = false, features = ["local_dynamic_tls"] }
+
+[patch.crates-io]
+# Fixes quadratic parsing of deeply nested HTML, see vendor/README.md.
+html5ever = { path = "vendor/html5ever" }
 
 [profile.release]
 lto = true

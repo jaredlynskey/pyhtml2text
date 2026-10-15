@@ -1,14 +1,12 @@
-from typing import Optional
-
 def html2text(
-    html: str,
+    html: str | bytes,
     width: int = 80,
     *,
-    base_url: Optional[str] = None,
+    base_url: str | None = None,
     decorate: bool = True,
     link_footnotes: bool = True,
     table_borders: bool = True,
     wrap_links: bool = True,
-    max_wrap_width: Optional[int] = None,
+    max_wrap_width: int | None = None,
     raw: bool = False,
 ) -> str: ...

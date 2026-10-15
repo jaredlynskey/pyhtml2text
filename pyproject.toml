@@ -4,12 +4,12 @@ build-backend = "maturin"
 
 [project]
 name = "pyhtml2text"
-version = "0.1.0"
+version = "0.2.0"
 description = "Fast HTML to plain text, with relative link resolution (Python bindings to rust-html2text)"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 authors = [{ name = "Jared Lynskey", email = "jared@lynskey.co.nz" }]
 keywords = ["html", "text", "markdown", "html2text"]
 classifiers = [
@@ -25,6 +25,19 @@ Upstream = "https://github.com/jugglerchris/rust-html2text"
 [tool.maturin]
 python-source = "python"
 module-name = "pyhtml2text._pyhtml2text"
+# cargo leaves out vendor/html5ever (it has its own Cargo.toml), but the
+# [patch] in Cargo.toml needs it; the PGO data and CI files aren't needed.
+include = [
+  { path = "vendor/html5ever/Cargo.toml", format = "sdist" },
+  { path = "vendor/html5ever/LICENSE-*", format = "sdist" },
+  { path = "vendor/html5ever/README.md", format = "sdist" },
+  { path = "vendor/html5ever/src/**/*.rs", format = "sdist" },
+]
+exclude = [
+  { path = "pgo/**/*", format = "sdist" },
+  { path = "bench/**/*", format = "sdist" },
+  { path = ".github/**/*", format = "sdist" },
+]
 
 [tool.maturin.generate-ci.github]
 pytest = true

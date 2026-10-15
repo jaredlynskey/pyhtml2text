@@ -1,6 +1,12 @@
+use std::panic::{catch_unwind, AssertUnwindSafe};
+
 use html2text::config;
-use pyo3::exceptions::PyValueError;
+use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
+use pyo3::types::{PyBytes, PyString};
+
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 /// Render HTML as plain text.
 #[pyfunction]
@@ -19,7 +25,7 @@ use pyo3::prelude::*;
 #[allow(clippy::too_many_arguments)]
 fn render(
     py: Python<'_>,
-    html: &str,
+    html: &Bound<'_, PyAny>,
     width: usize,
     base_url: Option<String>,
     decorate: bool,
@@ -29,6 +35,18 @@ fn render(
     max_wrap_width: Option<usize>,
     raw: bool,
 ) -> PyResult<String> {
+    // Borrow the input without copying it; bytes are taken to be UTF-8.
+    let input: &[u8] = if let Ok(s) = html.downcast::<PyString>() {
+        s.to_str()?.as_bytes()
+    } else if let Ok(b) = html.downcast::<PyBytes>() {
+        b.as_bytes()
+    } else {
+        return Err(PyTypeError::new_err(format!(
+            "html must be str or bytes, not {}",
+            html.get_type().name()?
+        )));
+    };
+
     let mut conf = if decorate {
         config::plain()
     } else {
@@ -50,12 +68,27 @@ fn render(
     if raw {
         conf = conf.raw_mode(true);
     }
-    // Rendering is pure Rust, so let other Python threads run meanwhile.
-    py.detach(|| conf.string_from_read(html.as_bytes(), width))
-        .map_err(|e| PyValueError::new_err(e.to_string()))
+
+    // Rendering is pure Rust, so let other Python threads run meanwhile. A
+    // panic would otherwise surface as PanicException, which `except
+    // Exception` doesn't catch, so report it as a ValueError instead.
+    match py.detach(|| catch_unwind(AssertUnwindSafe(|| conf.string_from_read(input, width)))) {
+        Ok(Ok(text)) => Ok(text),
+        Ok(Err(e)) => Err(PyValueError::new_err(e.to_string())),
+        Err(panic) => {
+            let msg = panic
+                .downcast_ref::<&str>()
+                .copied()
+                .or_else(|| panic.downcast_ref::<String>().map(String::as_str))
+                .unwrap_or("unknown error");
+            Err(PyValueError::new_err(format!(
+                "html2text failed on this document: {msg}"
+            )))
+        }
+    }
 }
 
-#[pymodule]
+#[pymodule(gil_used = false)]
 fn _pyhtml2text(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(render, m)?)?;
     Ok(())

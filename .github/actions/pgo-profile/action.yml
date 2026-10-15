@@ -1,0 +1,54 @@
+name: PGO profile
+description: >
+  Build an instrumented wheel, run pgo/train.py with it, and merge the
+  profile. Sets RUSTFLAGS (to use the profile) for the rest of the job, and
+  PGO_RUST_TOOLCHAIN, since the real build must use the same Rust version the
+  profile was made with.
+
+inputs:
+  target:
+    description: maturin target
+    required: true
+  manylinux:
+    description: maturin manylinux setting (Linux only)
+    required: false
+    default: auto
+
+runs:
+  using: composite
+  steps:
+    - name: Install Rust with llvm-tools
+      id: rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: llvm-tools
+
+    - name: Build instrumented wheel
+      uses: PyO3/maturin-action@v1
+      with:
+        target: ${{ inputs.target }}
+        args: --release --out pgo-wheel
+        manylinux: ${{ inputs.manylinux }}
+        rust-toolchain: ${{ steps.rust.outputs.name }}
+        docker-options: -e CI
+      env:
+        RUSTFLAGS: -Cprofile-generate=${{ github.workspace }}/pgo-data
+
+    - name: Run training workload
+      shell: bash
+      run: |
+        set -e
+        python -m pip install --no-index --no-deps --find-links pgo-wheel --force-reinstall pyhtml2text
+        python pgo/train.py
+
+    - name: Merge profile
+      shell: pwsh
+      run: |
+        $toolchain = "${{ steps.rust.outputs.name }}"
+        $sysroot = rustup run $toolchain rustc --print sysroot
+        $hostTriple = (rustup run $toolchain rustc -vV | Select-String '^host: (.*)').Matches[0].Groups[1].Value
+        $profdata = Get-ChildItem -Path (Join-Path $sysroot "lib/rustlib/$hostTriple/bin") -Filter "llvm-profdata*" | Select-Object -First 1
+        & $profdata.FullName merge -o "${{ github.workspace }}/pgo.profdata" "${{ github.workspace }}/pgo-data"
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        "RUSTFLAGS=-Cprofile-use=${{ github.workspace }}/pgo.profdata" >> $env:GITHUB_ENV
+        "PGO_RUST_TOOLCHAIN=$toolchain" >> $env:GITHUB_ENV
