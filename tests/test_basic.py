@@ -33,3 +33,26 @@ def test_no_footnotes():
 def test_width_wraps():
     out = html2text("<p>" + "word " * 30 + "</p>", width=20)
     assert all(len(line) <= 20 for line in out.splitlines())
+
+
+def test_bad_base_url_leaves_links_alone():
+    for base in ("not a url", ""):
+        assert html2text('<a href="/x">x</a>', base_url=base) == "[x][1]\n\n[1]: /x\n"
+
+
+def test_zero_width_raises():
+    import pytest
+
+    with pytest.raises(ValueError):
+        html2text("<p>hi</p>", width=0)
+
+
+def test_tables():
+    html = "<table><tr><td>a</td><td>b</td></tr></table>"
+    assert html2text(html) == "─┬─\na│b\n─┴─\n"
+    assert html2text(html, table_borders=False) == "a b\n"
+
+
+def test_unicode_and_empty():
+    assert html2text("<p>한국어 텍스트 é</p>") == "한국어 텍스트 é\n"
+    assert html2text("") == ""
