@@ -242,7 +242,7 @@ where
                             self.sink.mark_script_already_started(&elem);
                         }
                         self.insert_appropriately(AppendNode(elem.clone()), None);
-                        self.open_elems.borrow_mut().push(elem);
+                        self.push(&elem);
                         self.to_raw_text_mode(ScriptData)
                     },
 
@@ -691,7 +691,7 @@ where
                 },
 
                 Token::Tag(tag!(</p>)) => {
-                    if !self.in_scope_named(button_scope, local_name!("p")) {
+                    if !self.p_in_button_scope() {
                         self.sink.parse_error(Borrowed("No <p> tag to close"));
                         self.insert_phantom(local_name!("p"));
                     }

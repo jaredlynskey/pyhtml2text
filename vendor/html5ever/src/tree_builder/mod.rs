@@ -14,6 +14,7 @@ pub use crate::interface::{AppendNode, AppendText, Attribute, NodeOrText};
 pub use crate::interface::{LimitedQuirks, NoQuirks, Quirks, QuirksMode};
 pub use markup5ever::interface::tree_builder::create_element_with_flags;
 
+use self::open_elems::{ElemKind, OpenElems};
 use self::types::*;
 
 use crate::tendril::StrTendril;
@@ -39,6 +40,7 @@ use markup5ever::{expanded_name, local_name, namespace_prefix, ns};
 mod tag_sets;
 
 mod data;
+mod open_elems;
 mod rules;
 mod types;
 
@@ -108,7 +110,7 @@ pub struct TreeBuilder<Handle, Sink> {
     doc_handle: Handle,
 
     /// Stack of open elements, most recently added at end.
-    open_elems: RefCell<Vec<Handle>>,
+    open_elems: RefCell<OpenElems<Handle>>,
 
     /// List of active formatting elements.
     active_formatting: RefCell<Vec<FormatEntry<Handle>>>,
@@ -268,7 +270,7 @@ where
     /// internal state. This is intended to support garbage-collected DOMs.
     pub fn trace_handles(&self, tracer: &dyn Tracer<Handle = Handle>) {
         tracer.trace_handle(&self.doc_handle);
-        for e in &*self.open_elems.borrow() {
+        for e in self.open_elems.borrow().iter() {
             tracer.trace_handle(e);
         }
 
@@ -544,7 +546,7 @@ where
     }
 
     fn end(&self) {
-        for elem in self.open_elems.borrow_mut().drain(..).rev() {
+        for elem in self.open_elems.borrow_mut().drain_all().rev() {
             self.sink.pop(&elem);
         }
     }
@@ -839,7 +841,10 @@ where
                     tag.attrs.clone(),
                     tag.had_duplicate_attributes,
                 );
-                self.open_elems.borrow_mut()[node_index] = new_element.clone();
+                let kind = self.open_elem_kind(&new_element);
+                self.open_elems
+                    .borrow_mut()
+                    .replace(node_index, new_element.clone(), kind);
                 self.active_formatting.borrow_mut()[node_formatting_index] =
                     FormatEntry::Element(new_element.clone(), tag);
                 node = new_element;
@@ -912,16 +917,30 @@ where
                 .iter()
                 .position(|n| self.sink.same_node(n, &furthest_block))
                 .expect("furthest block missing from open element stack");
+            let kind = self.open_elem_kind(&new_element);
             self.open_elems
                 .borrow_mut()
-                .insert(new_furthest_block_index + 1, new_element);
+                .insert(new_furthest_block_index + 1, new_element, kind);
 
             // 20.
         }
     }
 
+    fn open_elem_kind(&self, elem: &Handle) -> ElemKind {
+        let name = self.sink.elem_name(elem);
+        let name = name.expanded();
+        if *name.ns == ns!(html) && *name.local == local_name!("p") {
+            ElemKind::P
+        } else if button_scope(name) {
+            ElemKind::ButtonScopeBoundary
+        } else {
+            ElemKind::Other
+        }
+    }
+
     fn push(&self, elem: &Handle) {
-        self.open_elems.borrow_mut().push(elem.clone());
+        let kind = self.open_elem_kind(elem);
+        self.open_elems.borrow_mut().push(elem.clone(), kind);
     }
 
     fn pop(&self) -> Handle {
@@ -1215,8 +1234,15 @@ where
         self.expect_to_close(local_name!("p"));
     }
 
+    /// Whether the stack of open elements has a `p` element in button scope.
+    fn p_in_button_scope(&self) -> bool {
+        let result = self.open_elems.borrow().has_p_in_button_scope();
+        debug_assert_eq!(result, self.in_scope_named(button_scope, local_name!("p")));
+        result
+    }
+
     fn close_p_element_in_button_scope(&self) {
-        if self.in_scope_named(button_scope, local_name!("p")) {
+        if self.p_in_button_scope() {
             self.close_p_element();
         }
     }
