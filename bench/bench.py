@@ -15,6 +15,7 @@ import statistics
 import sys
 import time
 
+import pyhtml2text
 from pyhtml2text import html2text
 
 BASE = "https://example.com/dir/page.html"
@@ -66,26 +67,45 @@ def run(html, opts):
         return f"ValueError: {e}"
 
 
+def run_markdown(html, base_url=None):
+    try:
+        return pyhtml2text.html2markdown(html, base_url=base_url)
+    except (AttributeError, ValueError) as e:  # AttributeError: before 0.3.0
+        return f"{type(e).__name__}: {e}"
+
+
 def hashes(corpus):
     out = {}
     for name, html in inputs(corpus):
         for oname, opts in OPTION_SETS.items():
             out[f"{name}/{oname}"] = hashlib.sha256(run(html, opts).encode()).hexdigest()
+        if hasattr(pyhtml2text, "html2markdown"):
+            for oname, base in (("markdown", None), ("markdown_base_url", BASE)):
+                digest = hashlib.sha256(run_markdown(html, base).encode()).hexdigest()
+                out[f"{name}/{oname}"] = digest
     return out
 
 
+def median_ms(fn, html, repeat):
+    fn(html)
+    xs = []
+    for _ in range(repeat):
+        t = time.perf_counter()
+        fn(html)
+        xs.append(time.perf_counter() - t)
+    return statistics.median(xs) * 1000
+
+
 def timings(corpus, repeat):
-    print(f"{'input':22s} {'KiB':>6s} {'median ms':>10s}")
+    markdown = hasattr(pyhtml2text, "html2markdown")
+    print(f"{'input':22s} {'KiB':>6s} {'text ms':>10s}" + (f" {'markdown ms':>12s}" if markdown else ""))
     for name, html in inputs(corpus):
         if name in EDGE_CASES:
             continue
-        run(html, {})
-        xs = []
-        for _ in range(repeat):
-            t = time.perf_counter()
-            run(html, {})
-            xs.append(time.perf_counter() - t)
-        print(f"{name:22s} {len(html.encode()) / 1024:6.0f} {statistics.median(xs) * 1000:10.2f}")
+        line = f"{name:22s} {len(html.encode()) / 1024:6.0f} {median_ms(lambda h: run(h, {}), html, repeat):10.2f}"
+        if markdown:
+            line += f" {median_ms(run_markdown, html, repeat):12.2f}"
+        print(line)
     tiny = "<p>Hello <b>world</b>, <a href='/x'>link</a></p>"
     n = 20000
     t = time.perf_counter()

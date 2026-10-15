@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.0 (unreleased)
+
+- New `html2markdown(html, *, base_url=None)`: HTML to CommonMark with
+  GitHub's tables and strikethrough. Links and images keep their URLs (made
+  absolute with `base_url`), tables become pipe tables, code blocks are
+  fenced with their language, and characters are escaped only where Markdown
+  would misread them. 3–13× faster than markdownify, html2text and
+  html-to-markdown on real pages.
+- `html2text()` output is unchanged.
+
 ## 0.2.0 (2026-10-15)
 
 - 1.5–1.7× faster than 0.1.0 on real web pages, and 2× faster on short

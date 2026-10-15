@@ -10,7 +10,7 @@ import gzip
 import pathlib
 import sys
 
-from pyhtml2text import html2text
+from pyhtml2text import html2markdown, html2text
 
 CORPUS = pathlib.Path(__file__).parent / "corpus"
 OPTION_SETS = [
@@ -42,11 +42,15 @@ def main():
             for opts in OPTION_SETS:
                 html2text(text, **opts)
             html2text(page)
+            html2markdown(text)
+            html2markdown(page, base_url="https://example.com/docs/page.html")
     for _ in range(5000):
         for snippet in SNIPPETS:
             html2text(snippet)
-    html2text("<ul><li>" * 2000 + "x")
-    html2text("<blockquote>" * 2000 + "x")
+            html2markdown(snippet)
+    for nested in ("<ul><li>" * 2000 + "x", "<blockquote>" * 2000 + "x"):
+        html2text(nested)
+        html2markdown(nested)
     print(f"trained on {len(pages)} pages x {len(OPTION_SETS) + 1} option sets x {rounds} rounds")
 
 

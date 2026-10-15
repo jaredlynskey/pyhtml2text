@@ -1,10 +1,59 @@
 # pyhtml2text
 
-Fast HTML to plain text for Python, built on
+Fast HTML to plain text and to Markdown for Python, built on
 [rust-html2text](https://github.com/jugglerchris/rust-html2text).
 
-It adds one thing the upstream crate doesn't have yet: relative links can be
-resolved against the page's URL, so footnote links are usable on their own.
+Relative links can be resolved against the page's URL, so the output's links
+work on their own.
+
+## Markdown
+
+```python
+from pyhtml2text import html2markdown
+
+html = """<h2>Before you start</h2>
+<p>Read the <a href="setup.html">setup guide</a> and <b>back up</b> your data.</p>
+<img src="/img/diagram.png" alt="How it fits together">
+<table><tr><th>Plan</th><th>Price</th></tr><tr><td>Basic</td><td>Free</td></tr></table>"""
+
+print(html2markdown(html, base_url="https://example.com/docs/intro.html"))
+```
+
+```markdown
+## Before you start
+
+Read the [setup guide](https://example.com/docs/setup.html) and **back up** your data.
+
+![How it fits together](https://example.com/img/diagram.png)
+
+| Plan | Price |
+| --- | --- |
+| Basic | Free |
+```
+
+`html2markdown(html, *, base_url=None)` writes
+[CommonMark](https://commonmark.org/) with GitHub's tables and
+strikethrough, in the usual conventions:
+
+- `#` headings, `-` bullets, `_emphasis_` and `**strong**`, `~~strikethrough~~`.
+- Inline links and images, `[text](url)` and `![alt](src)`, made absolute when
+  `base_url` is given. A link whose only content is an icon uses its
+  `aria-label` or `title` as its text.
+- Fenced code blocks, tagged with the language when the page names one
+  (`class="language-python"`).
+- Pipe tables. Cells spanning rows or columns become empty cells, a table
+  without a header row gets an empty one, and tables used for page layout are
+  written as plain paragraphs.
+- Characters are escaped only where Markdown would otherwise read them as
+  syntax, so `snake_case`, `5 * 3` and `$5` stay as they are.
+- Lines aren't wrapped. Hidden content (`hidden`, `aria-hidden`,
+  `display: none`), scripts, styles and form controls are left out.
+
+The output is checked by rendering it back with a CommonMark parser and
+comparing every word, link and image with the original page, on real sites
+and on tens of thousands of random documents (`tests/markdown_check.py`).
+
+## Plain text
 
 ```python
 from pyhtml2text import html2text
@@ -16,11 +65,6 @@ print(html2text(html, base_url="https://example.com/docs/page.html"))
 #
 # [1]: https://example.com/login
 ```
-
-`html` can be a `str` or UTF-8 `bytes` (e.g. `response.content`). Requires
-Python 3.10 or later.
-
-## Options
 
 `html2text(html, width=80, *, ...)`
 
@@ -34,9 +78,21 @@ Python 3.10 or later.
 | `max_wrap_width` | `None` | wrap paragraphs narrower than `width` |
 | `raw` | `False` | flatten tables so cell text stays together |
 
+Both functions take a `str` or UTF-8 `bytes` (e.g. `response.content`).
+Requires Python 3.10 or later.
+
 ## Performance
 
-Median time to render a page, on an Apple Silicon Mac:
+Median time on an Apple Silicon Mac. To Markdown:
+
+| | Wikipedia article (1 MB) | BBC News front page (370 KB) | Python docs page (245 KB) |
+|---|---|---|---|
+| [markdownify](https://pypi.org/project/markdownify/) | 184 ms | 28 ms | 97 ms |
+| [html2text](https://pypi.org/project/html2text/) (pure Python) | 73 ms | 13 ms | 37 ms |
+| [html-to-markdown](https://pypi.org/project/html-to-markdown/) | 44 ms | 5.6 ms | 15 ms |
+| **pyhtml2text** | **14 ms** | **1.7 ms** | **4.5 ms** |
+
+To plain text:
 
 | | Wikipedia article (780 KB) | BBC News front page (370 KB) |
 |---|---|---|
@@ -44,7 +100,7 @@ Median time to render a page, on an Apple Silicon Mac:
 | [html2text-rs](https://pypi.org/project/html2text-rs/) | 15.2 ms | 2.5 ms |
 | **pyhtml2text** | **10.9 ms** | **1.6 ms** |
 
-- The GIL is released while rendering, so threads scale across cores. On
+- The GIL is released while converting, so threads scale across cores. On
   free-threaded Python (3.14t) the module runs without re-enabling the GIL.
 - Wheels for Linux (x86_64, aarch64), macOS and Windows x64 are built with
   profile-guided optimisation, which makes them about 25% faster. Other
@@ -54,9 +110,11 @@ Median time to render a page, on an Apple Silicon Mac:
 
 ## Credits
 
-The rendering is done by rust-html2text by Chris Emerson (MIT). This package
-uses [a fork](https://github.com/jaredlynskey/rust-html2text/tree/pyhtml2text-perf)
+The plain-text rendering is done by rust-html2text by Chris Emerson (MIT).
+This package uses [a fork](https://github.com/jaredlynskey/rust-html2text/tree/pyhtml2text-perf)
 that adds `base_url` and some performance changes, and a patched copy of
 [html5ever](https://github.com/servo/html5ever) (MIT/Apache-2.0, see
-`vendor/`). It isn't affiliated with or endorsed by either upstream project, so
-please report issues here rather than upstream.
+`vendor/`). Markdown output is checked with
+[pulldown-cmark](https://github.com/raphlinus/pulldown-cmark) (MIT). It
+isn't affiliated with or endorsed by any of these projects, so please report
+issues here rather than upstream.

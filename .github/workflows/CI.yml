@@ -78,7 +78,7 @@ jobs:
           uv venv .venv
           source .venv/bin/activate
           uv pip install pyhtml2text --no-index --no-deps --find-links dist --reinstall
-          uv pip install pyhtml2text pytest
+          uv pip install pyhtml2text pytest markdown-it-py html5lib
           pytest
       - name: pytest
         if: ${{ contains(fromJSON('["armv7", "s390x", "ppc64le"]'), matrix.platform.target) }}
@@ -94,7 +94,7 @@ jobs:
             set -e
             python3 -m venv .venv
             source .venv/bin/activate
-            pip install pytest
+            pip install pytest markdown-it-py html5lib
             pip install pyhtml2text --no-index --no-deps --find-links dist --force-reinstall
             pip install pyhtml2text
             pytest
@@ -146,7 +146,7 @@ jobs:
             python3 -m virtualenv .venv
             source .venv/bin/activate
             pip install pyhtml2text --no-index --no-deps --find-links dist --force-reinstall
-            pip install pyhtml2text pytest
+            pip install pyhtml2text pytest markdown-it-py html5lib
             pytest
           '
       - name: pytest
@@ -163,7 +163,7 @@ jobs:
             python3 -m virtualenv .venv
             source .venv/bin/activate
             pip install pyhtml2text --no-index --no-deps --find-links dist --force-reinstall
-            pip install pyhtml2text pytest
+            pip install pyhtml2text pytest markdown-it-py html5lib
             pytest
 
   windows:
@@ -224,7 +224,7 @@ jobs:
           uv venv .venv
           source .venv/Scripts/activate
           uv pip install pyhtml2text --no-index --no-deps --find-links dist --reinstall
-          uv pip install pyhtml2text pytest
+          uv pip install pyhtml2text pytest markdown-it-py html5lib
           pytest
 
   macos:
@@ -278,7 +278,7 @@ jobs:
           uv venv .venv
           source .venv/bin/activate
           uv pip install pyhtml2text --no-index --no-deps --find-links dist --reinstall
-          uv pip install pyhtml2text pytest
+          uv pip install pyhtml2text pytest markdown-it-py html5lib
           pytest
 
   sdist:

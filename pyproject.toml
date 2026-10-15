@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "pyhtml2text"
-version = "0.2.0"
+version = "0.3.0"
 description = "Fast HTML to plain text, with relative link resolution (Python bindings to rust-html2text)"
 readme = "README.md"
 license = "MIT"
