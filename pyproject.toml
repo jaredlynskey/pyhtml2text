@@ -1,0 +1,30 @@
+[build-system]
+requires = ["maturin>=1.7,<2"]
+build-backend = "maturin"
+
+[project]
+name = "pyhtml2text"
+version = "0.1.0"
+description = "Fast HTML to plain text, with relative link resolution (Python bindings to rust-html2text)"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.9"
+authors = [{ name = "Jared Lynskey", email = "jared@lynskey.co.nz" }]
+keywords = ["html", "text", "markdown", "html2text"]
+classifiers = [
+  "Programming Language :: Rust",
+  "Programming Language :: Python :: 3",
+  "Topic :: Text Processing :: Markup :: HTML",
+]
+
+[project.urls]
+Source = "https://github.com/jaredlynskey/pyhtml2text"
+Upstream = "https://github.com/jugglerchris/rust-html2text"
+
+[tool.maturin]
+python-source = "python"
+module-name = "pyhtml2text._pyhtml2text"
+
+[tool.maturin.generate-ci.github]
+pytest = true
