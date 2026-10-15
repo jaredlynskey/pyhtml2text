@@ -5,6 +5,10 @@ use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyString};
 
+#[cfg(not(all(
+    target_env = "gnu",
+    any(target_arch = "arm", target_arch = "powerpc64", target_arch = "s390x")
+)))]
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 

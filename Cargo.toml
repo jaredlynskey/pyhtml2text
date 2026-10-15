@@ -14,7 +14,11 @@ pyo3 = { version = "0.26", features = ["extension-module", "abi3-py310"] }
 # Fork of jugglerchris/rust-html2text with Config::base_url and some
 # performance changes (branch pyhtml2text-perf).
 html2text = { git = "https://github.com/jaredlynskey/rust-html2text", rev = "9c109fac38728040cf3c32b411305cdd840bd511" }
+
 # Much faster than the system allocators for html2text's many small allocations.
+# Not on glibc armv7/ppc64le/s390x: their manylinux2014 cross compilers are too
+# old to build it (keep in sync with the cfg in src/lib.rs).
+[target.'cfg(not(all(target_env = "gnu", any(target_arch = "arm", target_arch = "powerpc64", target_arch = "s390x"))))'.dependencies]
 mimalloc = { version = "0.1", default-features = false, features = ["local_dynamic_tls"] }
 
 [patch.crates-io]

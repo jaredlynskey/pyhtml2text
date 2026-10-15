@@ -6,7 +6,7 @@
   snippets. Output is unchanged.
   - Wheels for Linux x86_64/aarch64, macOS and Windows x64 are built with
     profile-guided optimisation.
-  - Uses mimalloc as the allocator.
+  - Uses mimalloc as the allocator (except on glibc armv7, ppc64le and s390x).
   - Style rules are shared rather than rebuilt and copied for every call.
 - Deeply nested HTML no longer takes quadratic time to parse: 40,000 nested
   `<ul>` lists went from 6s to 0.14s (patched html5ever, see `vendor/`).
