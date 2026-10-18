@@ -106,14 +106,18 @@ To plain text:
   profile-guided optimisation, which makes them about 25% faster. Other
   platforms get the same code without it.
 - Deeply nested HTML is parsed in linear time, so hostile input can't stall a
-  worker: 40,000 nested lists take 0.14 s, against 6 s with stock html5ever.
+  worker: 40,000 nested lists take 0.14 s, against 6 s with stock html5ever,
+  and 100,000 levels of nesting followed by unmatched end tags take under
+  0.1 s.
 
 ## Credits
 
 The plain-text rendering is done by rust-html2text by Chris Emerson (MIT).
 This package uses [a fork](https://github.com/jaredlynskey/rust-html2text/tree/pyhtml2text-perf)
-that adds `base_url` and some performance changes, and a patched copy of
-[html5ever](https://github.com/servo/html5ever) (MIT/Apache-2.0, see
+that adds `base_url` and some performance changes, and a copy of
+[html5ever](https://github.com/servo/html5ever) (MIT/Apache-2.0) with
+[servo/html5ever#800](https://github.com/servo/html5ever/pull/800) by Josef
+Guenther applied, which makes parsing deeply nested HTML linear (see
 `vendor/`). Markdown output is checked with
 [pulldown-cmark](https://github.com/raphlinus/pulldown-cmark) (MIT). It
 isn't affiliated with or endorsed by any of these projects, so please report

@@ -171,6 +171,8 @@ def test_hostile_input_stays_linear():
         "<ul><li>" * 100_000 + "x",
         "<blockquote>" * 100_000 + "x",
         "<table><tr><td>" * 10_000 + "x",
+        "<span>" * 100_000 + "x" + "</em>" * 100_000,
+        "<svg>" + "<g>" * 100_000 + "</x>" * 100_000 + "</svg>x",
         "<table><tr><td rowspan=65534 colspan=1000>a</td><td>b</td></tr>" + "<tr></tr>" * 200_000 + "</table>",
     ]
     for html in cases:

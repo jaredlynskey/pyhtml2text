@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- The vendored html5ever now carries
+  [servo/html5ever#800](https://github.com/servo/html5ever/pull/800) by Josef
+  Guenther in place of our narrower patch. Every "in scope" check and the
+  other searches of the stack of open elements are now O(1), so unmatched
+  end tags and end tags inside SVG or MathML no longer make deeply nested
+  HTML quadratic: 32,000 nested `<span>` followed by as many unmatched
+  `</em>` went from 3.4 s to 0.02 s. Output is unchanged.
+- About 0.4 µs more per call, and 0–2% on real pages.
+
 ## 0.3.0 (2026-10-15)
 
 - New `html2markdown(html, *, base_url=None)`: HTML to CommonMark with

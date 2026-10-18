@@ -74,16 +74,24 @@ def test_rejects_other_types():
 
 def test_deep_nesting_is_linear():
     # Parsing used to be quadratic in nesting depth (40,000 nested lists took
-    # 6s); with the patched html5ever this takes well under a second.
+    # 6s); with the patched html5ever each of these takes well under a second.
+    # pyhtml2text 0.3.0, whose patch didn't cover them, took 33s and 50s on the
+    # last two.
     import platform
     import sys
     import time
 
-    html = "<ul><li>" * 100_000 + "x"
-    start = time.perf_counter()
-    out = html2text(html)
-    elapsed = time.perf_counter() - start
-    assert out.rstrip().endswith("x")
-    # Only time it where tests run natively; emulated CI runners are slow.
-    if platform.machine().lower() in ("x86_64", "amd64") or sys.platform == "darwin":
-        assert elapsed < 10, f"took {elapsed:.1f}s"
+    cases = [
+        "<ul><li>" * 100_000 + "x",
+        "<div>" * 100_000 + "x</p></p>",
+        "<span>" * 100_000 + "x" + "</em>" * 100_000,
+        "<svg>" + "<g>" * 100_000 + "</x>" * 100_000 + "</svg>x",
+    ]
+    for html in cases:
+        start = time.perf_counter()
+        out = html2text(html)
+        elapsed = time.perf_counter() - start
+        assert out.rstrip().endswith("x")
+        # Only time it where tests run natively; emulated CI runners are slow.
+        if platform.machine().lower() in ("x86_64", "amd64") or sys.platform == "darwin":
+            assert elapsed < 10, f"took {elapsed:.1f}s on {html[:20]!r}..."
