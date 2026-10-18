@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.1 (2026-10-19)
 
 - The vendored html5ever now carries
   [servo/html5ever#800](https://github.com/servo/html5ever/pull/800) by Josef

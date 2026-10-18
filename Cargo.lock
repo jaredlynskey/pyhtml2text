@@ -249,7 +249,7 @@ dependencies = [
 
 [[package]]
 name = "pyhtml2text"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "html2text",
  "html5ever",
