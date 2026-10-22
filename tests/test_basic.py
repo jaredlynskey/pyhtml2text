@@ -95,3 +95,9 @@ def test_deep_nesting_is_linear():
         # Only time it where tests run natively; emulated CI runners are slow.
         if platform.machine().lower() in ("x86_64", "amd64") or sys.platform == "darwin":
             assert elapsed < 10, f"took {elapsed:.1f}s on {html[:20]!r}..."
+
+
+def test_deeply_nested_tables():
+    # Each table's cells are rendered on their own; nesting them mustn't
+    # take a call stack as deep as the tables (or time quadratic in it).
+    assert html2text("<table><tr><td>" * 100_000 + "x") == "─\nx\n─\n"

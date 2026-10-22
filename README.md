@@ -1,7 +1,6 @@
 # pyhtml2text
 
-Fast HTML to plain text and to Markdown for Python, built on
-[rust-html2text](https://github.com/jugglerchris/rust-html2text).
+Fast HTML to plain text and to Markdown for Python, written in Rust.
 
 Relative links can be resolved against the page's URL, so the output's links
 work on their own.
@@ -98,7 +97,7 @@ To plain text:
 |---|---|---|
 | [html2text](https://pypi.org/project/html2text/) (pure Python) | 71.5 ms | 14.9 ms |
 | [html2text-rs](https://pypi.org/project/html2text-rs/) | 15.2 ms | 2.5 ms |
-| **pyhtml2text** | **10.9 ms** | **1.6 ms** |
+| **pyhtml2text** | **7.0 ms** | **1.3 ms** |
 
 - The GIL is released while converting, so threads scale across cores. On
   free-threaded Python (3.14t) the module runs without re-enabling the GIL.
@@ -112,13 +111,13 @@ To plain text:
 
 ## Credits
 
-The plain-text rendering is done by rust-html2text by Chris Emerson (MIT).
-This package uses [a fork](https://github.com/jaredlynskey/rust-html2text/tree/pyhtml2text-perf)
-that adds `base_url` and some performance changes, and a copy of
-[html5ever](https://github.com/servo/html5ever) (MIT/Apache-2.0) with
+HTML is parsed by a copy of [html5ever](https://github.com/servo/html5ever)
+(MIT/Apache-2.0) with
 [servo/html5ever#800](https://github.com/servo/html5ever/pull/800) by Josef
 Guenther applied, which makes parsing deeply nested HTML linear (see
-`vendor/`). Markdown output is checked with
-[pulldown-cmark](https://github.com/raphlinus/pulldown-cmark) (MIT). It
-isn't affiliated with or endorsed by any of these projects, so please report
-issues here rather than upstream.
+`vendor/`). Text is measured with
+[unicode-width](https://github.com/unicode-rs/unicode-width) (MIT/Apache-2.0)
+and Markdown output is checked with
+[pulldown-cmark](https://github.com/raphlinus/pulldown-cmark) (MIT). This
+package isn't affiliated with or endorsed by any of these projects, so please
+report issues here rather than upstream.

@@ -1,11 +1,14 @@
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
-use html2text::config;
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyString};
 
+mod dom;
 mod markdown;
+mod table;
+mod text;
+mod url;
 
 #[cfg(not(all(
     target_env = "gnu",
@@ -16,9 +19,9 @@ static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 /// Borrow the input without copying it; bytes are taken to be UTF-8.
 fn input_bytes<'a>(html: &'a Bound<'_, PyAny>) -> PyResult<&'a [u8]> {
-    if let Ok(s) = html.downcast::<PyString>() {
+    if let Ok(s) = html.cast::<PyString>() {
         Ok(s.to_str()?.as_bytes())
-    } else if let Ok(b) = html.downcast::<PyBytes>() {
+    } else if let Ok(b) = html.cast::<PyBytes>() {
         Ok(b.as_bytes())
     } else {
         Err(PyTypeError::new_err(format!(
@@ -33,9 +36,9 @@ fn input_bytes<'a>(html: &'a Bound<'_, PyAny>) -> PyResult<&'a [u8]> {
 /// Exception` doesn't catch, so it is reported as a ValueError instead.
 fn convert<F>(py: Python<'_>, f: F) -> PyResult<String>
 where
-    F: FnOnce() -> Result<String, html2text::Error> + Send,
+    F: FnOnce() -> Result<String, String> + Send,
 {
-    match py.detach(|| catch_unwind(AssertUnwindSafe(|| f().map_err(|e| e.to_string())))) {
+    match py.detach(|| catch_unwind(AssertUnwindSafe(f))) {
         Ok(Ok(text)) => Ok(text),
         Ok(Err(e)) => Err(PyValueError::new_err(e)),
         Err(panic) => {
@@ -79,30 +82,17 @@ fn render(
     raw: bool,
 ) -> PyResult<String> {
     let input = input_bytes(html)?;
-
-    let mut conf = if decorate {
-        config::plain()
-    } else {
-        config::plain_no_decorate()
+    let opts = text::Options {
+        width,
+        decorate,
+        link_footnotes,
+        table_borders,
+        wrap_links,
+        max_wrap_width,
+        raw,
+        base_url: base_url.filter(|base| !base.is_empty()),
     };
-    conf = conf.link_footnotes(link_footnotes).allow_width_overflow();
-    if let Some(base) = base_url {
-        conf = conf.base_url(base);
-    }
-    if !table_borders {
-        conf = conf.no_table_borders();
-    }
-    if !wrap_links {
-        conf = conf.no_link_wrapping();
-    }
-    if let Some(w) = max_wrap_width {
-        conf = conf.max_wrap_width(w);
-    }
-    if raw {
-        conf = conf.raw_mode(true);
-    }
-
-    convert(py, || conf.string_from_read(input, width))
+    convert(py, || text::render(&dom::parse(input), &opts))
 }
 
 /// Convert HTML to Markdown.
@@ -119,7 +109,7 @@ fn to_markdown(
     base_url: Option<String>,
 ) -> PyResult<String> {
     let input = input_bytes(html)?;
-    convert(py, || markdown::from_read(input, base_url.as_deref()))
+    convert(py, || Ok(markdown::from_read(input, base_url.as_deref())))
 }
 
 #[pymodule(gil_used = false)]

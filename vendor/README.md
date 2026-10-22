@@ -41,8 +41,8 @@ Checked against stock 0.39.0 before vendoring:
 
 The extra bookkeeping costs about 0.4 µs per call, and 0–2% on real pages.
 
-Once the PR is in an html5ever release that rust-html2text uses, drop this
-directory and the `[patch.crates-io]` entry in `Cargo.toml`. Upgrading
-rust-html2text to one that uses a newer html5ever without updating this copy
-silently drops the patch (cargo only warns that it is unused), so
-`test_deep_nesting_is_linear` checks that it is still in effect.
+Once the PR is in an html5ever release, move the `html5ever` dependency in
+`Cargo.toml` to it and drop this directory and the `[patch.crates-io]`
+entry. Upgrading html5ever without updating this copy silently drops the
+patch (cargo only warns that it is unused), so `test_deep_nesting_is_linear`
+checks that it is still in effect.

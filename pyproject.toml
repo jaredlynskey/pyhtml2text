@@ -1,11 +1,11 @@
 [build-system]
-requires = ["maturin>=1.7,<2"]
+requires = ["maturin>=1.9.4,<2"]
 build-backend = "maturin"
 
 [project]
 name = "pyhtml2text"
-version = "0.3.1"
-description = "Fast HTML to plain text, with relative link resolution (Python bindings to rust-html2text)"
+version = "0.4.0"
+description = "Fast HTML to plain text and Markdown, with relative link resolution"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
@@ -20,7 +20,6 @@ classifiers = [
 
 [project.urls]
 Source = "https://github.com/jaredlynskey/pyhtml2text"
-Upstream = "https://github.com/jugglerchris/rust-html2text"
 
 [tool.maturin]
 python-source = "python"

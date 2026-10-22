@@ -6,7 +6,7 @@
 //! fenced code blocks, inline links and images, one blank line between blocks,
 //! and no trailing whitespace except the two spaces of a hard line break.
 //!
-//! The document is parsed by html2text (and so by the patched html5ever) and
+//! The document is parsed by the patched html5ever (see `dom`) and
 //! walked with an explicit stack rather than recursion, so no input can
 //! overflow the thread's stack.
 
@@ -15,7 +15,8 @@ use std::fmt::Write as _;
 use std::mem;
 use std::rc::Rc;
 
-use html2text::{Handle, NodeData, RcDom};
+use crate::dom::{self, Dom, Handle, NodeData};
+use crate::url;
 use html5ever::Attribute;
 
 const HTML_NS: &str = "http://www.w3.org/1999/xhtml";
@@ -36,12 +37,12 @@ const MAX_ROWSPAN: usize = 65534;
 
 /// Convert an HTML document to Markdown. Relative links and image sources are
 /// resolved against `base_url` when one is given.
-pub fn from_read(input: &[u8], base_url: Option<&str>) -> Result<String, html2text::Error> {
-    let dom = html2text::config::plain().parse_html(input)?;
-    Ok(convert(&dom, base_url.filter(|base| !base.is_empty())))
+pub fn from_read(input: &[u8], base_url: Option<&str>) -> String {
+    let dom = dom::parse(input);
+    convert(&dom, base_url.filter(|base| !base.is_empty()))
 }
 
-fn convert(dom: &RcDom, base_url: Option<&str>) -> String {
+fn convert(dom: &Dom, base_url: Option<&str>) -> String {
     // Emphasis is written `_like this_` unless it touches a letter, where only
     // `*` works. A document that needed both is written again preferring `*`,
     // so that it uses one style. A few constructs can only be written one way
@@ -59,7 +60,7 @@ fn convert(dom: &RcDom, base_url: Option<&str>) -> String {
     }
 }
 
-fn convert_with(dom: &RcDom, base_url: Option<&str>, em_style: EmStyle) -> (String, EmUse) {
+fn convert_with(dom: &Dom, base_url: Option<&str>, em_style: EmStyle) -> (String, EmUse) {
     let mut conv = Converter::new(base_url, em_style);
     let mut stack = vec![Step::Enter(dom.document.clone())];
     while let Some(step) = stack.pop() {
@@ -1453,7 +1454,7 @@ impl<'a> Converter<'a> {
             .filter(|c| !matches!(c, '\t' | '\n' | '\r'))
             .collect();
         match self.base_url {
-            Some(base) => html2text::resolve_url(base, &url),
+            Some(base) => url::resolve(base, &url),
             None => url,
         }
     }

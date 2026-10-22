@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.4.0 (2026-10-22)
+
+- `html2text()` is rendered by this package's own code. The library it used
+  before came from a fork that can no longer be fetched, so the source
+  distribution and fresh builds of 0.3.1 fail. The new renderer is a
+  clean-room implementation: it was written from 0.3.1's output, the HTML
+  standard and RFC 3986, without reference to the old library's source.
+- Output is the same as 0.3.1's, byte for byte, with every option set: on
+  the benchmark corpus, on 38 of 39 other real pages (the last differs at
+  width 40 only), and on 1,500 random documents without tables. With tables,
+  99.2% of 2,000 random documents match under each option set. The known
+  differences are all in unusual markup:
+  - A cell with nothing in it, beside a cell spanning rows: 0.3.1 draws the
+    span against the wrong cell, so borders and line breaks land a column
+    off. They now follow the spanning cell.
+  - A table with nothing to show whose cells span into further empty rows,
+    an empty `<pre>` or heading directly inside `<pre>`, and a table with
+    nothing to show in a paragraph: 0.3.1 writes an extra blank line.
+  - Headings, quotes and list items squeezed to fewer than three columns
+    break `**` and other markers in different places.
+  - Some emoji sequences (joined with U+200D) and Arabic lam-alef pairs, cut
+    at the end of a line in a narrow table cell.
+- `html2text()` is 1.2–2× faster on real pages (7.0 ms against 10.8 ms for
+  a 780 KB Wikipedia article) and 2× faster on short snippets.
+- `html2markdown()` output is unchanged.
+- PyO3 0.30. Building from source needs maturin 1.9.4 or later.
+
 ## 0.3.1 (2026-10-19)
 
 - The vendored html5ever now carries
