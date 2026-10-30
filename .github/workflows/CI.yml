@@ -197,7 +197,9 @@ jobs:
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist
-          sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
+          # sccache before 0.19 can't parse the `-Tp <path>` that cc 1.9 and
+          # later pass cl.exe for mimalloc's C++ source (rust-lang/cc-rs#2063).
+          sccache: false
           rust-toolchain: ${{ env.PGO_RUST_TOOLCHAIN }}
       - uses: actions/setup-python@v7
         with:
@@ -210,7 +212,9 @@ jobs:
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist -i python3.14t python3.15t
-          sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
+          # sccache before 0.19 can't parse the `-Tp <path>` that cc 1.9 and
+          # later pass cl.exe for mimalloc's C++ source (rust-lang/cc-rs#2063).
+          sccache: false
           rust-toolchain: ${{ env.PGO_RUST_TOOLCHAIN }}
       - name: Upload wheels
         uses: actions/upload-artifact@v7
