@@ -97,6 +97,30 @@ def test_deep_nesting_is_linear():
             assert elapsed < 10, f"took {elapsed:.1f}s on {html[:20]!r}..."
 
 
+def test_deep_nesting_renders_in_linear_time():
+    # In 0.4.0 each level of these cost time for every level around it: the
+    # lists took 49s and 28s, the others 6s. Now each takes under a second.
+    import platform
+    import sys
+    import time
+
+    n = 400_000
+    cases = [
+        ("<ul><li>" * n + "x", "* " * n + "x\n"),
+        ("<dl><dd>" * n + "x", "  " * n + "x\n"),
+        ("<div><p>a" * (n // 2), "\n\n".join(["a"] * (n // 2)) + "\n"),
+        # Wrapped at 80 columns.
+        ("<b>" * n + "x", "**" * n + "x" + "**" * n),
+    ]
+    for html, expected in cases:
+        start = time.perf_counter()
+        out = html2text(html)
+        elapsed = time.perf_counter() - start
+        assert (out if expected.endswith("\n") else out.replace("\n", "")) == expected
+        if platform.machine().lower() in ("x86_64", "amd64") or sys.platform == "darwin":
+            assert elapsed < 10, f"took {elapsed:.1f}s on {html[:20]!r}..."
+
+
 def test_deeply_nested_tables():
     # Each table's cells are rendered on their own; nesting them mustn't
     # take a call stack as deep as the tables (or time quadratic in it).

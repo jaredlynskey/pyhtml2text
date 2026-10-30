@@ -756,11 +756,7 @@ fn layout(r: &mut Renderer, cells: &mut [Cell], nrows_all: usize, width: usize) 
 fn vertical(cells: &[Cell], nrows: usize, width: usize, borders: bool) -> Job {
     let mut pieces = Vec::new();
     let mut to_render = Vec::new();
-    let rule = || Line {
-        text: "─".repeat(width),
-        width,
-        kind: LineKind::Rule,
-    };
+    let rule = || Line::of_kind("─".repeat(width), width, LineKind::Rule);
     let sep = || Line::new("/".repeat(width), width);
     if borders {
         pieces.push(Some(rule()));
@@ -1020,15 +1016,12 @@ impl Grid {
     }
 
     fn row_line(&self, row: usize, line: usize, sep: &str) -> Line {
-        let mut out = Line {
-            text: String::new(),
-            width: 0,
-            kind: if sep == " " {
-                LineKind::Text
-            } else {
-                LineKind::Row
-            },
+        let kind = if sep == " " {
+            LineKind::Text
+        } else {
+            LineKind::Row
         };
+        let mut out = Line::of_kind(String::new(), 0, kind);
         for (i, &(idx, _, _)) in self.vis[row].iter().enumerate() {
             if i > 0 {
                 out.text.push_str(sep);
@@ -1134,11 +1127,7 @@ impl Grid {
             }
         }
         // Lay the spanning cells' text over the line.
-        let mut out = Line {
-            text: String::new(),
-            width: 0,
-            kind: LineKind::Rule,
-        };
+        let mut out = Line::of_kind(String::new(), 0, LineKind::Rule);
         texts.sort_by_key(|t| t.0);
         let mut ti = texts.into_iter().peekable();
         let mut x = 0;

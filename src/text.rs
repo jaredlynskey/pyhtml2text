@@ -7,6 +7,7 @@
 //! pending and only carried out when something is written after them, so
 //! empty blocks leave no trace and adjacent requests merge.
 
+use std::collections::HashMap;
 use std::mem;
 
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
@@ -85,7 +86,11 @@ pub fn render(dom: &Dom, opts: &Options) -> Result<String, String> {
         parent.r.footnotes = mem::take(&mut done.r.footnotes);
         parent.r.table_sizes = mem::take(&mut done.r.table_sizes);
         let lines = done.r.bufs.pop().unwrap().finish();
-        parent.table.as_mut().unwrap().add(lines);
+        parent
+            .table
+            .as_mut()
+            .unwrap()
+            .add(lines.into_iter().map(Line::flatten).collect());
     }
     Ok(levels.pop().unwrap().r.finish())
 }
@@ -113,6 +118,10 @@ pub struct Line {
     pub text: String,
     pub width: usize,
     pub kind: LineKind,
+    /// The prefixes of the blocks the line is in, still to be put in front
+    /// of `text`, written back to front: each block then adds its own in
+    /// time for its length, however deeply blocks are nested.
+    rprefix: String,
 }
 
 /// What a line is, for a table it ends up in.
@@ -127,15 +136,39 @@ pub enum LineKind {
 
 impl Line {
     pub fn new(text: String, width: usize) -> Line {
+        Line::of_kind(text, width, LineKind::Text)
+    }
+
+    pub fn of_kind(text: String, width: usize, kind: LineKind) -> Line {
         Line {
             text,
             width,
-            kind: LineKind::Text,
+            kind,
+            rprefix: String::new(),
         }
     }
 
     fn empty() -> Line {
         Line::new(String::new(), 0)
+    }
+
+    fn add_prefix(&mut self, prefix: &str) {
+        self.rprefix.extend(prefix.chars().rev());
+        self.width += prefix.len();
+        // A prefix makes a table's lines plain text.
+        self.kind = LineKind::Text;
+    }
+
+    /// The line with its prefixes in front of it.
+    fn flatten(mut self) -> Line {
+        if !self.rprefix.is_empty() {
+            let mut text = String::with_capacity(self.rprefix.len() + self.text.len());
+            text.extend(self.rprefix.chars().rev());
+            text.push_str(&self.text);
+            self.text = text;
+            self.rprefix.clear();
+        }
+        self
     }
 }
 
@@ -150,7 +183,7 @@ struct Buf {
     word: String,
     word_w: usize,
     pieces: Vec<usize>,
-    word_style: Vec<u8>,
+    word_style: u32,
     /// The word has a character of non-zero width.
     word_base: bool,
     /// A space is due before the next word.
@@ -188,7 +221,7 @@ impl Buf {
             word: String::new(),
             word_w: 0,
             pieces: Vec::new(),
-            word_style: Vec::new(),
+            word_style: 0,
             word_base: false,
             space: false,
             open: false,
@@ -410,8 +443,11 @@ pub struct Renderer<'a> {
     /// Sizes of the tables seen so far, shared with the cells' renderers.
     pub table_sizes: table::Sizes,
     /// The styled elements (emphasis, code, links...) the text is inside.
-    /// Text in one style is measured as one piece.
-    style: Vec<u8>,
+    /// Text in one style is measured as one piece. Each distinct stack of
+    /// them is numbered (`styles`, 0 for none), and this holds the number of
+    /// the stack up to each of them.
+    style: Vec<u32>,
+    styles: HashMap<(u32, u8), u32>,
     /// Width of the leading whitespace of a `<pre>` line, or of whitespace
     /// after a tab, held until something follows it.
     prews: usize,
@@ -427,6 +463,7 @@ impl<'a> Renderer<'a> {
             footnotes: Vec::new(),
             table_sizes: table::Sizes::new(),
             style: Vec::new(),
+            styles: HashMap::new(),
             prews: 0,
             after_tab: false,
         }
@@ -437,9 +474,24 @@ impl<'a> Renderer<'a> {
     }
 
     fn mark(&mut self) {
-        for f in &mut self.frames {
+        // Frames are marked from the outermost in, so once one is found
+        // marked, so are all those outside it.
+        for f in self.frames.iter_mut().rev() {
+            if f.wrote {
+                break;
+            }
             f.wrote = true;
         }
+    }
+
+    fn push_style(&mut self, id: u8) {
+        let next = self.styles.len() as u32 + 1;
+        let style = *self.styles.entry((self.cur_style(), id)).or_insert(next);
+        self.style.push(style);
+    }
+
+    fn cur_style(&self) -> u32 {
+        self.style.last().copied().unwrap_or(0)
     }
 
     /// The first thing happens in a buffer: carry out the separator before
@@ -558,10 +610,11 @@ impl<'a> Renderer<'a> {
 
     fn word_char(&mut self, c: char) {
         let w = char_width(c);
+        let style = self.cur_style();
         let b = self.bufs.last_mut().unwrap();
-        if b.word_style != self.style {
+        if b.word_style != style {
             b.piece();
-            b.word_style.clone_from(&self.style);
+            b.word_style = style;
         }
         b.word.push(c);
         b.word_w += w;
@@ -599,6 +652,7 @@ impl<'a> Renderer<'a> {
                 self.touch();
             }
         }
+        let style = self.cur_style();
         for c in seg.chars() {
             let b = self.bufs.last_mut().unwrap();
             let at_start = (b.cur.is_empty() || self.after_tab) && b.word.is_empty();
@@ -641,9 +695,9 @@ impl<'a> Renderer<'a> {
                 }
                 b.chop(&" ".repeat(n));
             }
-            if b.word_style != self.style {
+            if b.word_style != style {
                 b.piece();
-                b.word_style.clone_from(&self.style);
+                b.word_style = style;
             }
             b.word.push(c);
             b.word_w += char_width(c);
@@ -731,22 +785,12 @@ impl<'a> Renderer<'a> {
         let lines = self.bufs.pop().unwrap().finish();
         if !lines.is_empty() {
             let b = self.b();
-            for (i, line) in lines.into_iter().enumerate() {
+            for (i, mut line) in lines.into_iter().enumerate() {
                 let prefix = if i == 0 { first } else { rest };
-                let mut s = String::with_capacity(prefix.len() + line.text.len());
-                s.push_str(prefix);
-                s.push_str(&line.text);
-                // A prefix makes a table's lines plain text.
-                let kind = if prefix.is_empty() {
-                    line.kind
-                } else {
-                    LineKind::Text
-                };
-                b.lines.push(Line {
-                    text: s,
-                    width: prefix.len() + line.width,
-                    kind,
-                });
+                if !prefix.is_empty() {
+                    line.add_prefix(prefix);
+                }
+                b.lines.push(line);
             }
             b.blank_after = false;
             b.content = true;
@@ -833,7 +877,7 @@ impl<'a> Renderer<'a> {
         self.start(Kind::Lead(LINE));
         stack.push(Step::Leave(Leave::Frame));
         // Unlike emphasis, the markers are part of the term's style.
-        self.style.push(b'd');
+        self.push_style(b'd');
         stack.push(Step::Leave(Leave::Styled("")));
         if self.opts.decorate {
             self.text("*");
@@ -938,7 +982,7 @@ impl<'a> Renderer<'a> {
                     "code" => {
                         // Unlike emphasis, the markers are part of the code's
                         // style.
-                        self.style.push(b'c');
+                        self.push_style(b'c');
                         if decorate {
                             self.text("`");
                             stack.push(Step::Leave(Leave::Styled("")));
@@ -953,7 +997,7 @@ impl<'a> Renderer<'a> {
                     "ins" => ("", "", b'n'),
                     _ if sup_digits(node).is_some() => {
                         let digits = sup_digits(node).unwrap();
-                        self.style.push(b's');
+                        self.push_style(b's');
                         self.text(&digits);
                         self.style.pop();
                         return;
@@ -963,12 +1007,12 @@ impl<'a> Renderer<'a> {
                 if !open.is_empty() {
                     self.text(open);
                 }
-                self.style.push(id);
+                self.push_style(id);
                 Leave::Styled(close)
             }
             "del" | "s" => {
                 self.b().strike += 1;
-                self.style.push(b'x');
+                self.push_style(b'x');
                 Leave::Strike
             }
             "a" => match attr("href") {
@@ -982,7 +1026,7 @@ impl<'a> Renderer<'a> {
                         None => href,
                     };
                     self.text("[");
-                    self.style.push(b'a');
+                    self.push_style(b'a');
                     Leave::Link(url)
                 }
                 None => Leave::Nothing,
@@ -1179,6 +1223,7 @@ impl<'a> Renderer<'a> {
         let lines = b.finish();
         let mut out = String::new();
         for line in lines {
+            out.extend(line.rprefix.chars().rev());
             out.push_str(&line.text);
             out.push('\n');
         }

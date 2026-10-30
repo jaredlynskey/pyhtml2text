@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Deeply nested lists, definitions, paragraphs and emphasis are rendered in
+  linear time again. In 0.4.0 each level cost time for every level around
+  it: 400,000 nested lists took 49 s, and now take 0.5 s. Output is
+  unchanged.
+
 ## 0.4.0 (2026-10-22)
 
 - `html2text()` is rendered by this package's own code. The library it used
