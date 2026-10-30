@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "pyhtml2text"
-version = "0.4.0"
+version = "0.4.1"
 description = "Fast HTML to plain text and Markdown, with relative link resolution"
 readme = "README.md"
 license = "MIT"

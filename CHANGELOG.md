@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.1 (2026-10-30)
 
 - Deeply nested lists, definitions, paragraphs and emphasis are rendered in
   linear time again. In 0.4.0 each level cost time for every level around
