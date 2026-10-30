@@ -3,6 +3,10 @@
 # version given (or the default Python, with none) and runs the tests.
 set -euo pipefail
 
+# Only uv's own Pythons: otherwise a free-threaded 3.15t that the runner has
+# for building would do for "3.15".
+export UV_PYTHON_PREFERENCE=only-managed
+
 for py in "${@:-}"; do
   rm -rf .venv-test
   uv venv -q ${py:+-p "$py"} .venv-test
