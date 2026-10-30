@@ -12,9 +12,10 @@ crate-type = ["cdylib"]
 [dependencies]
 pyo3 = { version = "0.30", features = ["abi3-py310"] }
 # The HTML parser; patched below.
-html5ever = "0.39"
-# Display width of characters, for wrapping.
-unicode-width = "=0.2.2"
+html5ever = "0.40"
+# Display width of characters, for wrapping. Pinned, since newer Unicode data
+# can change the output.
+unicode-width = "=0.2.3"
 # Reads the Markdown back to check that emphasis parses as intended.
 pulldown-cmark = { version = "0.13", default-features = false }
 

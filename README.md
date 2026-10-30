@@ -105,7 +105,7 @@ To plain text:
   profile-guided optimisation, which makes them about 25% faster. Other
   platforms get the same code without it.
 - Deeply nested HTML is parsed in linear time, so hostile input can't stall a
-  worker: 40,000 nested lists take 0.14 s, against 6 s with stock html5ever,
+  worker: 40,000 nested lists take 0.02 s, against 18 s with stock html5ever,
   and 100,000 levels of nesting followed by unmatched end tags take under
   0.1 s.
 

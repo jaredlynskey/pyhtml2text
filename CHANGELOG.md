@@ -6,6 +6,14 @@
   linear time again. In 0.4.0 each level cost time for every level around
   it: 400,000 nested lists took 49 s, and now take 0.5 s. Output is
   unchanged.
+- Character widths from Unicode 18 (unicode-width 0.2.3). The halfwidth
+  katakana sound marks ﾞ and ﾟ count one column, as terminals show them,
+  rather than none, and characters new in Unicode 18 (emoji, kana,
+  ideographic characters and combining marks) get their own widths. Other
+  text wraps as before.
+- html5ever 0.40.1, still with
+  [servo/html5ever#800](https://github.com/servo/html5ever/pull/800).
+  Output is unchanged. Building from source needs Rust 1.85 or later.
 
 ## 0.4.0 (2026-10-22)
 
