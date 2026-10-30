@@ -6,6 +6,9 @@
   linear time again. In 0.4.0 each level cost time for every level around
   it: 400,000 nested lists took 49 s, and now take 0.5 s. Output is
   unchanged.
+- Wheels for free-threaded Python 3.15 (3.15t), alongside 3.14t. The abi3
+  wheels already cover Python 3.15. CI now tests on 3.10, 3.14t, 3.15 and
+  3.15t.
 - Character widths from Unicode 18 (unicode-width 0.2.3). The halfwidth
   katakana sound marks ﾞ and ﾟ count one column, as terminals show them,
   rather than none, and characters new in Unicode 18 (emoji, kana,

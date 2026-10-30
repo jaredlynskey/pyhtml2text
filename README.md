@@ -18,6 +18,8 @@ html = """<h2>Before you start</h2>
 print(html2markdown(html, base_url="https://example.com/docs/intro.html"))
 ```
 
+Output:
+
 ```markdown
 ## Before you start
 
@@ -100,7 +102,8 @@ To plain text:
 | **pyhtml2text** | **7.0 ms** | **1.3 ms** |
 
 - The GIL is released while converting, so threads scale across cores. On
-  free-threaded Python (3.14t) the module runs without re-enabling the GIL.
+  free-threaded Python (3.14t and 3.15t) the module runs without re-enabling
+  the GIL.
 - Wheels for Linux (x86_64, aarch64), macOS and Windows x64 are built with
   profile-guided optimisation, which makes them about 25% faster. Other
   platforms get the same code without it.
